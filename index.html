@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Comparison</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        #queryBox {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+        }
+        #submitBtn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #results {
+            margin-top: 20px;
+            text-align: left;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .response-box {
+            background: white;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 5px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>AI Model Response Comparison</h1>
+    <input type="text" id="queryBox" placeholder="Enter your query here...">
+    <button id="submitBtn">Ask</button>
+
+    <div id="results"></div>
+
+    <script>
+        // Replace with your actual API keys
+    
+
+        const GEMINI_KEY = "AIzaSyB4ZxpYWk-SgUIeG-8ZyWX3kF-pnn4kh70";
+        const OPENAI_KEY = "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";
+        const HF_API_KEY = "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";
+
+        const HF_MODEL = "mistralai/Mistral-7B-Instruct-v0.2";
+        const HF_API_URL = `https://api-inference.huggingface.co/models/${HF_MODEL}`;
+
+        async function getGeminiResponse(prompt) {
+            try {
+                const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + GEMINI_KEY, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "Gemini Error: No response.";
+            } catch (error) {
+                return `Gemini Error: ${error.message}`;
+            }
+        }
+
+        async function getChatGPTResponse(prompt) {
+            try {
+                const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${OPENAI_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-3.5-turbo",
+                        messages: [{ role: "user", content: prompt }]
+                    })
+                });
+                const data = await response.json();
+                return data.choices?.[0]?.message?.content || "ChatGPT Error: No response.";
+            } catch (error) {
+                return `ChatGPT Error: ${error.message}`;
+            }
+        }
+
+        async function getHuggingFaceResponse(prompt) {
+            try {
+                const response = await fetch(HF_API_URL, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${HF_API_KEY}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ inputs: prompt })
+                });
+                const data = await response.json();
+                return data?.[0]?.generated_text || "Hugging Face Error: No response.";
+            } catch (error) {
+                return `Hugging Face Error: ${error.message}`;
+            }
+        }
+
+        document.getElementById("submitBtn").addEventListener("click", async function() {
+            const prompt = document.getElementById("queryBox").value;
+            if (!prompt) {
+                alert("Please enter a query!");
+                return;
+            }
+
+            document.getElementById("results").innerHTML = "<p>Loading responses...</p>";
+
+            const [geminiResp, chatgptResp, hfResp] = await Promise.all([
+                getGeminiResponse(prompt),
+                getChatGPTResponse(prompt),
+                getHuggingFaceResponse(prompt)
+            ]);
+
+            document.getElementById("results").innerHTML = `
+                <div class="response-box"><strong>Gemini Response:</strong> <p>${geminiResp}</p></div>
+                <div class="response-box"><strong>ChatGPT Response:</strong> <p>${chatgptResp}</p></div>
+                <div class="response-box"><strong>Hugging Face Response:</strong> <p>${hfResp}</p></div>
+            `;
+        });
+    </script>
+
+</body>
+</html>
